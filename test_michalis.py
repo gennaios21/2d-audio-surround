@@ -20,12 +20,19 @@ control_buttons = {}
 music_slider = None
 
 # Azimuth angles per speaker
+# speaker_angles_deg = {
+#     "Center": 0,
+#     "Right": 30,
+#     "Rear Right": 110,
+#     "Rear Left": 250,
+#     "Left": 330
+# }
 speaker_angles_deg = {
     "Center": 0,
-    "Right": 30,
-    "Rear Right": 110,
-    "Rear Left": 250,
-    "Left": 330
+    "Right": 45,
+    "Rear Right": 135,
+    "Rear Left": 215,
+    "Left": 315
 }
 
 # ======================== Audio and Playback ========================
@@ -170,8 +177,8 @@ def calculate_vbap_gain(source_angle_deg):
     Returns gain values for [FL, C, FR, SL, SR]
     """
     # Speaker setup: angles in degrees, order matters
-    speaker_angles = [-30, 30, 0, -110, 110]
-    # speaker_angles = [-45, 0, 45, -135, 135]
+    # speaker_angles = [-30, 30, 0, -110, 110]
+    speaker_angles = [-45, 45, 0, -135, 135]
 
     speaker_names = ["FL", "FR", "C", "SL", "SR"]
 
