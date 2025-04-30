@@ -184,10 +184,10 @@ def calculate_vbap_gain(source_angle_deg):
 
     # Define all valid speaker pairs for VBAP
     speaker_pairs = [
-        (0, 1),  # FL - C
-        (1, 2),  # C - FR
+        (0, 2),  # FL - C
+        (2, 1),  # C - FR
         (0, 3),  # FL - SL
-        (2, 4),  # FR - SR
+        (1, 4),  # FR - SR
         (3, 4),  # SL - SR
     ]
 
