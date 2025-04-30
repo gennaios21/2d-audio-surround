@@ -159,8 +159,8 @@ def format_time(seconds):
 # ======================== VBAP Gain for 5 speakers ========================
 def calculate_vbap_gain(azimuth):
     azimuth = azimuth % 360
-    # speaker_angles = np.array([0, 45, 135, 225, 315])
-    speaker_angles = np.array([225, 315, 0, 45, 135])
+    speaker_angles = np.array([0, 45, 135, 225, 315])
+    # speaker_angles = np.array([225, 315, 0, 45, 135])
 
 
 
