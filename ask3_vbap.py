@@ -1,5 +1,3 @@
-# Full updated 5.0 VBAP surround sound audio player with GUI and proper 5-channel output.
-
 import tkinter as tk
 from tkinter import filedialog
 import sounddevice as sd
@@ -18,6 +16,7 @@ slider_updating = False
 vbap_gain = np.array([1.0]*5)  # For 5 speakers
 control_buttons = {}
 music_slider = None
+force_stereo = False  # True for 2.0, false for 5.0
 
 # Azimuth angles per speaker
 speaker_angles_deg = {
@@ -27,7 +26,6 @@ speaker_angles_deg = {
     "Rear Left": -110,
     "Left": -30
 }
-
 
 # ======================== Audio and Playback ========================
 def load_file():
@@ -47,18 +45,20 @@ def load_file():
 
 def start_stream():
     global stream
+    channels = 2 if force_stereo else 5
     stream = sd.OutputStream(
         samplerate=fs,
-        channels=5,
+        channels=channels,
         callback=audio_callback
     )
+    print("Speakers number: ", stream.channels)
     stream.start()
 
 def audio_callback(outdata, frames, time, status):
     global pointer, playing, volume, vbap_gain
 
     if not playing or audio_data is None:
-        outdata[:] = np.zeros((frames, 5))
+        outdata[:] = np.zeros_like(outdata)
         return
 
     end = pointer + frames
@@ -69,16 +69,20 @@ def audio_callback(outdata, frames, time, status):
         playing = False
         update_all_buttons()
 
-    if chunk.shape[1] == 1:
-        mono_chunk = chunk[:, 0]
-    else:
-        mono_chunk = chunk[:, 0]
+    mono_chunk = chunk[:, 0] if chunk.shape[1] == 1 else chunk[:, 0]
 
-    output = np.zeros((frames, 5))
-    for i in range(5):
-        output[:, i] = mono_chunk * vbap_gain[i] * volume
+    if outdata.shape[1] == 5:
+        output = np.zeros((frames, 5))
+        for i in range(5):
+            output[:, i] = mono_chunk * vbap_gain[i] * volume
+        outdata[:] = output
 
-    outdata[:] = output
+    elif outdata.shape[1] == 2:
+        stereo_output = np.zeros((frames, 2))
+        stereo_output[:, 0] = mono_chunk * (vbap_gain[0] + 0.7 * vbap_gain[2] + vbap_gain[3]) * volume
+        stereo_output[:, 1] = mono_chunk * (vbap_gain[1] + 0.7 * vbap_gain[2] + vbap_gain[4]) * volume
+        outdata[:] = stereo_output
+
     pointer += frames
 
 def toggle_playback(speaker_name):
@@ -157,60 +161,40 @@ def format_time(seconds):
     s = int(seconds) % 60
     return f"{m:02d}:{s:02d}"
 
-# ======================== VBAP Gain for 5 speakers ========================
+# ======================== VBAP Gain Calculation ========================
 def normalize(v):
-    """Normalize a vector to unit power."""
     norm = np.linalg.norm(v)
     return v / norm if norm > 0 else v
-
 
 def calculate_vbap_gain(source_angle_deg):
     speaker_angles = [-30, 30, 0, -110, 110]
     speaker_names = ["FL", "FR", "C", "RL", "RR"]
     speaker_pairs = [
-        (0, 2),  # FL - C
-        (1, 2),  # FR - C
-        (0, 3),  # FL - RL
-        (1, 4),  # FR - RR
-        (3, 4),  # RL - RR
+        (0, 2), (1, 2), (0, 3), (1, 4), (3, 4)
     ]
 
     source_angle_rad = np.radians(source_angle_deg)
     source_vec = np.array([np.cos(source_angle_rad), np.sin(source_angle_rad)])
 
-    best_gains = None
-    best_pair = None
-    best_alignment = -np.inf
-
+    best_gains = np.zeros(5)
     for i, j in speaker_pairs:
         v1 = np.array([np.cos(np.radians(speaker_angles[i])), np.sin(np.radians(speaker_angles[i]))])
         v2 = np.array([np.cos(np.radians(speaker_angles[j])), np.sin(np.radians(speaker_angles[j]))])
         L = np.column_stack((v1, v2))
-
         try:
             L_inv = np.linalg.inv(L)
         except np.linalg.LinAlgError:
             continue
-
         gains_pair = np.dot(L_inv, source_vec)
-
-        if np.all(gains_pair >= 0):  # Only accept positive gains
+        if np.all(gains_pair >= 0):
             gains_pair = normalize(gains_pair)
             gains_full = np.zeros(len(speaker_angles))
             gains_full[i] = gains_pair[0]
             gains_full[j] = gains_pair[1]
-
-            # Compute alignment score (dot product with source direction)
-            approx_vec = gains_pair[0] * v1 + gains_pair[1] * v2
-            alignment = np.dot(normalize(approx_vec), normalize(source_vec))
-
-            if alignment > best_alignment:
-                best_alignment = alignment
-                best_gains = gains_full
-                best_pair = (speaker_names[i], speaker_names[j], speaker_angles[i], speaker_angles[j])
-
-    print(source_angle_deg, best_gains, best_pair)
-    return best_gains if best_gains is not None else np.zeros(5)
+            best_gains = gains_full
+            break
+    print(source_angle_deg, best_gains)
+    return best_gains
 
 # ======================== GUI Setup ========================
 root = tk.Tk()
@@ -291,4 +275,3 @@ volume_slider.pack()
 
 update_music_slider()
 root.mainloop()
-
