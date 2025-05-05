@@ -3,31 +3,28 @@ from tkinter import filedialog
 import sounddevice as sd
 import soundfile as sf
 import numpy as np
+import math
+
 
 # ======================== Global audio state ========================
+
 audio_data = None
 fs = 44100
 pointer = 0
 playing = False
 stream = None
 volume = 1.0
+last_azimuth = 0                  
 current_playing = None
 slider_updating = False
-vbap_gain = np.array([1.0]*5)  # For 5 speakers
+vbap_gain = np.array([1.0]*5)        # For 5 speakers
 control_buttons = {}
 music_slider = None
-force_stereo = False  # True for 2.0, false for 5.0
+force_stereo = False               # True for 2.0, false for 5.0
 
-# Azimuth angles per speaker
-speaker_angles_deg = {
-    "Center": 0,
-    "Right": 30,
-    "Rear Right": 110,
-    "Rear Left": -110,
-    "Left": -30
-}
 
 # ======================== Audio and Playback ========================
+
 def load_file():
     global audio_data, fs, pointer, stream
     path = filedialog.askopenfilename(filetypes=[("WAV files", "*.wav")])
@@ -51,7 +48,6 @@ def start_stream():
         channels=channels,
         callback=audio_callback
     )
-    print("Speakers number: ", stream.channels)
     stream.start()
 
 def audio_callback(outdata, frames, time, status):
@@ -67,7 +63,6 @@ def audio_callback(outdata, frames, time, status):
     if len(chunk) < frames:
         chunk = np.concatenate([chunk, np.zeros((frames - len(chunk), audio_data.shape[1]))])
         playing = False
-        update_all_buttons()
 
     mono_chunk = chunk[:, 0] if chunk.shape[1] == 1 else chunk[:, 0]
 
@@ -85,83 +80,49 @@ def audio_callback(outdata, frames, time, status):
 
     pointer += frames
 
-def toggle_playback(speaker_name):
-    global playing, pointer, current_playing
-
+def start_playback(azimuth):
+    global playing, pointer, stream, vbap_gain, last_azimuth
     if audio_data is None:
+        print("No file loaded!")
         return
 
-    if current_playing and current_playing != speaker_name:
-        stop_playback(current_playing)
+    if azimuth is not None:
+        last_azimuth = azimuth
 
-    if playing and current_playing == speaker_name:
-        stop_playback(speaker_name)
-    else:
-        start_playback(speaker_name)
-
-def start_playback(speaker_name):
-    global playing, pointer, current_playing, stream, vbap_gain
     if pointer >= len(audio_data):
         pointer = 0
     if stream:
         stream.stop()
     playing = True
-    current_playing = speaker_name
-    update_button(speaker_name)
-    azimuth = speaker_angles_deg[speaker_name]
-    vbap_gain = calculate_vbap_gain(azimuth)
+    vbap_gain = calculate_vbap_gain(last_azimuth)
     start_stream()
+    update_play_button()
 
-def stop_playback(speaker_name):
-    global playing, current_playing, stream
-    playing = False
-    current_playing = None
-    if stream:
-        stream.stop()
-    update_button(speaker_name)
+def toggle_playback():
+    global playing, current_playing, last_azimuth
 
-# ======================== GUI Update Helpers ========================
-def update_button(speaker_name):
-    if speaker_name == current_playing:
-        control_buttons[speaker_name].config(
-            text=f"{speaker_name} Playing ({speaker_angles_deg[speaker_name]}°)", bg="red"
-        )
-    else:
-        control_buttons[speaker_name].config(
-            text=f"{speaker_name} ({speaker_angles_deg[speaker_name]}°)", bg="green"
-        )
-
-def update_all_buttons():
-    for speaker_name in control_buttons:
-        update_button(speaker_name)
-
-def on_volume_change(val):
-    global volume
-    volume = float(val) / 100.0
-
-def on_music_slider_change(val):
-    global pointer, slider_updating
-    if slider_updating:
+    if audio_data is None:
+        status_label.config(text="Load a .wav file first!", fg="red")
         return
-    if audio_data is not None:
-        pointer = int(float(val)) * fs
+    if playing:
+        stop_playback()
+    else:
+        start_playback(current_playing if current_playing else last_azimuth)
 
-def update_music_slider():
-    global slider_updating
-    if audio_data is not None and playing:
-        slider_updating = True
-        seconds = pointer / fs
-        music_slider.set(int(seconds))
-        current_time_label.config(text=format_time(seconds))
-        slider_updating = False
-    root.after(200, update_music_slider)
+def stop_playback():
+    global playing
+    playing = False
+    update_play_button()
 
-def format_time(seconds):
-    m = int(seconds) // 60
-    s = int(seconds) % 60
-    return f"{m:02d}:{s:02d}"
+def update_play_button():
+    play_stop_button.config(
+        text="Stop" if playing else "Play", 
+        bg="red" if playing else "green"
+    )
+
 
 # ======================== VBAP Gain Calculation ========================
+
 def normalize(v):
     norm = np.linalg.norm(v)
     return v / norm if norm > 0 else v
@@ -193,14 +154,113 @@ def calculate_vbap_gain(source_angle_deg):
             gains_full[j] = gains_pair[1]
             best_gains = gains_full
             break
-    print(source_angle_deg, best_gains)
+    print(f"---- Selected azimuth/angle: {np.round(source_angle_deg, 2)}, Gains: {best_gains}, Selected speakers: {(speaker_angles[i], speaker_angles[j])}")
     return best_gains
 
+def update_vbap_for_angle(angle):
+    global vbap_gain
+    vbap_gain = calculate_vbap_gain(angle)
+
+# ======================== GUI Update Helpers ========================
+
+def on_volume_change(val):
+    global volume
+    volume = float(val) / 100.0
+
+def on_music_slider_change(val):
+    global pointer, slider_updating
+    if slider_updating:
+        return
+    if audio_data is not None:
+        pointer = int(float(val)) * fs
+
+def update_music_slider():
+    global slider_updating
+    if audio_data is not None and playing:
+        slider_updating = True
+        seconds = pointer / fs
+        music_slider.set(int(seconds))
+        current_time_label.config(text=format_time(seconds))
+        slider_updating = False
+    root.after(200, update_music_slider)
+
+def format_time(seconds):
+    m = int(seconds) // 60
+    s = int(seconds) % 60
+    return f"{m:02d}:{s:02d}"
+
 # ======================== GUI Setup ========================
+
+class CircularSlider(tk.Canvas):
+    def __init__(self, parent, radius=140, padding=70, **kwargs):
+        self.radius = radius
+        self.padding = padding
+        total_size = 2 * radius + padding
+
+        kwargs.pop('width', None)
+        kwargs.pop('height', None)
+
+        super().__init__(parent, width=total_size, height=total_size, **kwargs)
+
+        self.center = (radius + padding // 2, radius + padding // 2)
+        self.angle = 0
+        self.bind("<B1-Motion>", self.on_drag)
+        self.bind("<ButtonRelease-1>", self.on_release)
+        self.draw_slider()
+
+    def draw_slider(self):
+        self.delete("all")
+        x0 = self.center[0] - self.radius
+        y0 = self.center[1] - self.radius
+        x1 = self.center[0] + self.radius
+        y1 = self.center[1] + self.radius
+        # Circle
+        self.create_oval(x0, y0, x1, y1, outline="black", width=3)
+        
+        # Line for angle
+        x = self.center[0] + self.radius * math.cos(math.radians(self.angle - 90))
+        y = self.center[1] + self.radius * math.sin(math.radians(self.angle - 90))
+        self.create_line(self.center[0], self.center[1], x, y, width=3, fill="red")
+
+        # Degree markers
+        for deg in [90, 180, 270]:
+            rad = math.radians(deg - 90)
+            x_m = self.center[0] + (self.radius + 15) * math.cos(rad)
+            y_m = self.center[1] + (self.radius + 15) * math.sin(rad)
+            self.create_text(x_m, y_m, text=str(deg)+"°", font=("Arial", 14))
+        
+        # Speaker markers
+        for deg in [0, 30, 110, 250, 330]:
+            rad = math.radians(deg - 90)
+            x_m = self.center[0] + (self.radius + 15) * math.cos(rad)
+            y_m = self.center[1] + (self.radius + 15) * math.sin(rad)
+            self.create_text(x_m, y_m, text="🔊"+str(deg)+"°",fill='green', font=("Arial", 14))
+
+
+    def on_drag(self, event):
+        dx = event.x - self.center[0]
+        dy = event.y - self.center[1]
+        self.angle = (math.degrees(math.atan2(dy, dx)) + 90) % 360  
+        self.draw_slider()
+        update_vbap_for_angle(self.angle) 
+        
+
+    def on_release(self, event):
+        dx = event.x - self.center[0]
+        dy = event.y - self.center[1]
+        self.angle = (math.degrees(math.atan2(dy, dx)) + 90) % 360
+        self.draw_slider()
+
+        global last_azimuth
+        last_azimuth = self.angle
+        start_playback(self.angle)
+
+# GUI Window
 root = tk.Tk()
 root.title("5.0 Surround Audio Player with VBAP")
-root.geometry("1200x700")
+root.geometry("1200x750")
 
+# Load file
 load_btn = tk.Button(root, text="Load File (.wav)", bg="lightblue", command=load_file, font=("Arial", 14))
 load_btn.pack(pady=10)
 
@@ -210,33 +270,15 @@ status_label.pack()
 layout = tk.Frame(root)
 layout.pack(pady=20)
 
-grid_layout = tk.Frame(layout)
-grid_layout.grid(row=0, column=0, pady=10)
+# Circular slider
+slider = CircularSlider(root, radius=100, width=200, height=200)
+slider.pack(pady=20)
 
-btn_c = tk.Button(grid_layout, text="Center (0°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Center"))
-btn_c.grid(row=0, column=1, padx=20, pady=20)
+# Play/Stop button
+play_stop_button = tk.Button(root, text="Play", command=toggle_playback, bg="green", font=("Arial", 14))
+play_stop_button.pack(pady=10)
 
-btn_l = tk.Button(grid_layout, text="Left (-30°) 🔊", width=15, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Left"))
-btn_l.grid(row=1, column=0, padx=20, pady=20)
-
-btn_r = tk.Button(grid_layout, text="Right (30°) 🔊", width=15, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Right"))
-btn_r.grid(row=1, column=2, padx=20, pady=20)
-
-btn_rl = tk.Button(grid_layout, text="Rear Left (-110°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Rear Left"))
-btn_rl.grid(row=2, column=0, padx=20, pady=20)
-
-btn_rr = tk.Button(grid_layout, text="Rear Right (110°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Rear Right"))
-btn_rr.grid(row=2, column=2, padx=20, pady=20)
-
-control_buttons["Center"] = btn_c
-control_buttons["Left"] = btn_l
-control_buttons["Right"] = btn_r
-control_buttons["Rear Left"] = btn_rl
-control_buttons["Rear Right"] = btn_rr
-
-listener_label = tk.Label(layout, text="🧍", font=("Arial", 40))
-listener_label.place(relx=0.5, rely=0.5, anchor="center")
-
+# Music slider
 slider_frame_main = tk.Frame(root)
 slider_frame_main.pack(pady=10)
 
@@ -257,6 +299,7 @@ music_slider.pack(side=tk.LEFT, padx=10)
 duration_label = tk.Label(slider_frame_main, text="00:00", font=("Arial", 12))
 duration_label.pack(side=tk.LEFT)
 
+# Volume
 slider_frame = tk.Frame(root)
 slider_frame.pack(side=tk.RIGHT, padx=30, anchor="n")
 
@@ -273,5 +316,7 @@ volume_slider = tk.Scale(
 volume_slider.set(50)
 volume_slider.pack()
 
+# Run app
 update_music_slider()
+print("Audio device configuration: ", 2.0 if force_stereo else 5.0)
 root.mainloop()
