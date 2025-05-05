@@ -204,6 +204,8 @@ class CircularSlider(tk.Canvas):
 
         self.center = (radius + padding // 2, radius + padding // 2)
         self.angle = 0
+        self.bind("<Enter>", self.on_enter)
+        self.bind("<Leave>", self.on_leave)
         self.bind("<B1-Motion>", self.on_drag)
         self.bind("<ButtonRelease-1>", self.on_release)
         self.draw_slider()
@@ -236,6 +238,13 @@ class CircularSlider(tk.Canvas):
             y_m = self.center[1] + (self.radius + 15) * math.sin(rad)
             self.create_text(x_m, y_m, text="🔊"+str(deg)+"°", fill='blue', font=("Arial", 14))
 
+    def on_enter(self, event):
+        # Change cursor to a hand when mouse enters the circle
+        self.config(cursor="hand2")
+
+    def on_leave(self, event):
+        # Revert the cursor back to default when mouse leaves the circle
+        self.config(cursor="")
 
     def on_drag(self, event):
         dx = event.x - self.center[0]
@@ -261,7 +270,7 @@ root.title("5.0 Surround Audio Player with VBAP")
 root.geometry("1200x750")
 
 # Load file
-load_btn = tk.Button(root, text="Load File (.wav)", bg="lightblue", command=load_file, font=("Arial", 14))
+load_btn = tk.Button(root, text="Load File (.wav)", bg="lightblue", command=load_file, font=("Arial", 14), cursor="hand2")
 load_btn.pack(pady=10)
 
 status_label = tk.Label(root, text="No file loaded", fg='red', font=("Arial", 14))
@@ -275,7 +284,7 @@ slider = CircularSlider(root, radius=100, width=200, height=200)
 slider.pack(pady=20)
 
 # Play/Stop button
-play_stop_button = tk.Button(root, text="Play", command=toggle_playback, bg="green", font=("Arial", 14))
+play_stop_button = tk.Button(root, text="Play", command=toggle_playback, bg="green", font=("Arial", 14), cursor="hand2")
 play_stop_button.pack(pady=10)
 
 # Music slider
@@ -292,7 +301,8 @@ music_slider = tk.Scale(
     orient=tk.HORIZONTAL,
     length=500,
     showvalue=0,
-    command=on_music_slider_change
+    command=on_music_slider_change,
+    cursor="hand2"
 )
 music_slider.pack(side=tk.LEFT, padx=10)
 
@@ -311,7 +321,8 @@ volume_slider = tk.Scale(
     orient=tk.VERTICAL,
     command=on_volume_change,
     length=300,
-    font=("Arial", 12)
+    font=("Arial", 12),
+    cursor="hand2"
 )
 volume_slider.set(50)
 volume_slider.pack()

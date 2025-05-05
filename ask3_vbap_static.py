@@ -200,7 +200,7 @@ root = tk.Tk()
 root.title("5.0 Surround Audio Player with VBAP")
 root.geometry("1200x700")
 
-load_btn = tk.Button(root, text="Load File (.wav)", bg="lightblue", command=load_file, font=("Arial", 14))
+load_btn = tk.Button(root, text="Load File (.wav)", bg="lightblue", command=load_file, font=("Arial", 14), cursor="hand2")
 load_btn.pack(pady=10)
 
 status_label = tk.Label(root, text="No file loaded", foreground='red', font=("Arial", 14))
@@ -212,19 +212,19 @@ layout.pack(pady=20)
 grid_layout = tk.Frame(layout)
 grid_layout.grid(row=0, column=0, pady=10)
 
-btn_c = tk.Button(grid_layout, text="Center (0°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Center"))
+btn_c = tk.Button(grid_layout, text="Center (0°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Center"), cursor="hand2")
 btn_c.grid(row=0, column=1, padx=20, pady=20)
 
-btn_l = tk.Button(grid_layout, text="Left (-30°) 🔊", width=15, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Left"))
+btn_l = tk.Button(grid_layout, text="Left (-30°) 🔊", width=15, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Left"), cursor="hand2")
 btn_l.grid(row=1, column=0, padx=20, pady=20)
 
-btn_r = tk.Button(grid_layout, text="Right (30°) 🔊", width=15, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Right"))
+btn_r = tk.Button(grid_layout, text="Right (30°) 🔊", width=15, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Right"), cursor="hand2")
 btn_r.grid(row=1, column=2, padx=20, pady=20)
 
-btn_rl = tk.Button(grid_layout, text="Rear Left (-110°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Rear Left"))
+btn_rl = tk.Button(grid_layout, text="Rear Left (-110°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Rear Left"), cursor="hand2")
 btn_rl.grid(row=2, column=0, padx=20, pady=20)
 
-btn_rr = tk.Button(grid_layout, text="Rear Right (110°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Rear Right"))
+btn_rr = tk.Button(grid_layout, text="Rear Right (110°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Rear Right"), cursor="hand2")
 btn_rr.grid(row=2, column=2, padx=20, pady=20)
 
 control_buttons["Center"] = btn_c
@@ -249,7 +249,8 @@ music_slider = tk.Scale(
     orient=tk.HORIZONTAL,
     length=500,
     showvalue=0,
-    command=on_music_slider_change
+    command=on_music_slider_change, 
+    cursor="hand2"
 )
 music_slider.pack(side=tk.LEFT, padx=10)
 
@@ -267,7 +268,8 @@ volume_slider = tk.Scale(
     orient=tk.VERTICAL,
     command=on_volume_change,
     length=300,
-    font=("Arial", 12)
+    font=("Arial", 12), 
+    cursor="hand2"
 )
 volume_slider.set(50)
 volume_slider.pack()
