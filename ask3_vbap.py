@@ -51,7 +51,6 @@ def start_stream():
         channels=channels,
         callback=audio_callback
     )
-    print("Speakers number: ", stream.channels)
     stream.start()
 
 def audio_callback(outdata, frames, time, status):
@@ -193,7 +192,7 @@ def calculate_vbap_gain(source_angle_deg):
             gains_full[j] = gains_pair[1]
             best_gains = gains_full
             break
-    print(source_angle_deg, best_gains)
+    print(f"---- Selected azimuth/angle: {source_angle_deg}, Gains: {best_gains}, Selected speakers: {(speaker_angles[i], speaker_angles[j])}")
     return best_gains
 
 # ======================== GUI Setup ========================
@@ -274,4 +273,5 @@ volume_slider.set(50)
 volume_slider.pack()
 
 update_music_slider()
+print("Audio configuration: ", 2.0 if force_stereo else 5.0)
 root.mainloop()
