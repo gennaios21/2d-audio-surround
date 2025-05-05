@@ -34,7 +34,7 @@ def load_file():
             data = data[:, np.newaxis]
         audio_data = data
         pointer = 0
-        status_label.config(text=f"Loaded: {path.split('/')[-1]}")
+        status_label.config(text=f"Loaded: {path.split('/')[-1]}", fg='red')
         music_slider.config(to=int(len(audio_data) / fs))
         duration_label.config(text=format_time(len(audio_data) / fs))
         if not stream:
@@ -154,7 +154,7 @@ def calculate_vbap_gain(source_angle_deg):
             gains_full[j] = gains_pair[1]
             best_gains = gains_full
             break
-    print(f"---- Selected azimuth/angle: {np.round(source_angle_deg, 2)}, Gains: {best_gains}, Selected speakers: {(speaker_angles[i], speaker_angles[j])}")
+    # print(f"---- Selected azimuth/angle: {np.round(source_angle_deg, 2)}, Gains: {best_gains}, Selected speakers: {(speaker_angles[i], speaker_angles[j])}")
     return best_gains
 
 def update_vbap_for_angle(angle):
@@ -234,7 +234,7 @@ class CircularSlider(tk.Canvas):
             rad = math.radians(deg - 90)
             x_m = self.center[0] + (self.radius + 15) * math.cos(rad)
             y_m = self.center[1] + (self.radius + 15) * math.sin(rad)
-            self.create_text(x_m, y_m, text="🔊"+str(deg)+"°",fill='green', font=("Arial", 14))
+            self.create_text(x_m, y_m, text="🔊"+str(deg)+"°", fill='blue', font=("Arial", 14))
 
 
     def on_drag(self, event):
@@ -264,7 +264,7 @@ root.geometry("1200x750")
 load_btn = tk.Button(root, text="Load File (.wav)", bg="lightblue", command=load_file, font=("Arial", 14))
 load_btn.pack(pady=10)
 
-status_label = tk.Label(root, text="No file loaded", foreground='red', font=("Arial", 14))
+status_label = tk.Label(root, text="No file loaded", fg='red', font=("Arial", 14))
 status_label.pack()
 
 layout = tk.Frame(root)
@@ -303,7 +303,7 @@ duration_label.pack(side=tk.LEFT)
 slider_frame = tk.Frame(root)
 slider_frame.pack(side=tk.RIGHT, padx=30, anchor="n")
 
-tk.Label(slider_frame, text="Volume", font=("Arial", 16)).pack(pady=10)
+tk.Label(slider_frame, text="Volume "+"🔊", font=("Arial", 16)).pack(pady=10)
 volume_slider = tk.Scale(
     slider_frame,
     from_=100,
