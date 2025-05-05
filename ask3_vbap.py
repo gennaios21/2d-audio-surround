@@ -20,20 +20,14 @@ control_buttons = {}
 music_slider = None
 
 # Azimuth angles per speaker
-# speaker_angles_deg = {
-#     "Center": 0,
-#     "Right": 30,
-#     "Rear Right": 110,
-#     "Rear Left": 250,
-#     "Left": 330
-# }
 speaker_angles_deg = {
     "Center": 0,
-    "Right": 45,
-    "Rear Right": 135,
-    "Rear Left": 215,
-    "Left": 315
+    "Right": 30,
+    "Rear Right": 110,
+    "Rear Left": -110,
+    "Left": -30
 }
+
 
 # ======================== Audio and Playback ========================
 def load_file():
@@ -171,24 +165,14 @@ def normalize(v):
 
 
 def calculate_vbap_gain(source_angle_deg):
-    """
-    VBAP for 5.0 configuration: FL, C, FR, SL, SR
-
-    Returns gain values for [FL, C, FR, SL, SR]
-    """
-    # Speaker setup: angles in degrees, order matters
-    # speaker_angles = [-30, 30, 0, -110, 110]
-    speaker_angles = [-45, 45, 0, -135, 135]
-
-    speaker_names = ["FL", "FR", "C", "SL", "SR"]
-
-    # Define all valid speaker pairs for VBAP
+    speaker_angles = [-30, 30, 0, -110, 110]
+    speaker_names = ["FL", "FR", "C", "RL", "RR"]
     speaker_pairs = [
         (0, 2),  # FL - C
-        (2, 1),  # C - FR
-        (0, 3),  # FL - SL
-        (1, 4),  # FR - SR
-        (3, 4),  # SL - SR
+        (1, 2),  # FR - C
+        (0, 3),  # FL - RL
+        (1, 4),  # FR - RR
+        (3, 4),  # RL - RR
     ]
 
     source_angle_rad = np.radians(source_angle_deg)
@@ -196,9 +180,9 @@ def calculate_vbap_gain(source_angle_deg):
 
     best_gains = None
     best_pair = None
+    best_alignment = -np.inf
 
     for i, j in speaker_pairs:
-        # Create matrix from the two speaker direction vectors
         v1 = np.array([np.cos(np.radians(speaker_angles[i])), np.sin(np.radians(speaker_angles[i]))])
         v2 = np.array([np.cos(np.radians(speaker_angles[j])), np.sin(np.radians(speaker_angles[j]))])
         L = np.column_stack((v1, v2))
@@ -206,23 +190,27 @@ def calculate_vbap_gain(source_angle_deg):
         try:
             L_inv = np.linalg.inv(L)
         except np.linalg.LinAlgError:
-            continue  # Skip collinear or invalid pairs
+            continue
 
         gains_pair = np.dot(L_inv, source_vec)
 
-        if np.all(gains_pair >= 0):  # Valid pair found
+        if np.all(gains_pair >= 0):  # Only accept positive gains
             gains_pair = normalize(gains_pair)
             gains_full = np.zeros(len(speaker_angles))
             gains_full[i] = gains_pair[0]
             gains_full[j] = gains_pair[1]
-            best_gains = gains_full
-            best_pair = (speaker_angles[i], speaker_angles[j])
-            break  # Stop at first valid pair (could refine to closest match)
 
-    if best_gains is None:
-        raise ValueError("No suitable speaker pair found for the given source direction")
+            # Compute alignment score (dot product with source direction)
+            approx_vec = gains_pair[0] * v1 + gains_pair[1] * v2
+            alignment = np.dot(normalize(approx_vec), normalize(source_vec))
+
+            if alignment > best_alignment:
+                best_alignment = alignment
+                best_gains = gains_full
+                best_pair = (speaker_names[i], speaker_names[j], speaker_angles[i], speaker_angles[j])
+
     print(source_angle_deg, best_gains, best_pair)
-    return best_gains
+    return best_gains if best_gains is not None else np.zeros(5)
 
 # ======================== GUI Setup ========================
 root = tk.Tk()
@@ -244,16 +232,16 @@ grid_layout.grid(row=0, column=0, pady=10)
 btn_c = tk.Button(grid_layout, text="Center (0°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Center"))
 btn_c.grid(row=0, column=1, padx=20, pady=20)
 
-btn_l = tk.Button(grid_layout, text="Left (315°) 🔊", width=15, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Left"))
+btn_l = tk.Button(grid_layout, text="Left (-30°) 🔊", width=15, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Left"))
 btn_l.grid(row=1, column=0, padx=20, pady=20)
 
-btn_r = tk.Button(grid_layout, text="Right (45°) 🔊", width=15, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Right"))
+btn_r = tk.Button(grid_layout, text="Right (30°) 🔊", width=15, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Right"))
 btn_r.grid(row=1, column=2, padx=20, pady=20)
 
-btn_rl = tk.Button(grid_layout, text="Rear Left (225°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Rear Left"))
+btn_rl = tk.Button(grid_layout, text="Rear Left (-110°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Rear Left"))
 btn_rl.grid(row=2, column=0, padx=20, pady=20)
 
-btn_rr = tk.Button(grid_layout, text="Rear Right (135°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Rear Right"))
+btn_rr = tk.Button(grid_layout, text="Rear Right (110°) 🔊", width=20, height=2, font=("Arial", 14), bg="green", command=lambda: toggle_playback("Rear Right"))
 btn_rr.grid(row=2, column=2, padx=20, pady=20)
 
 control_buttons["Center"] = btn_c
