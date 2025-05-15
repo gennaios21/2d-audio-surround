@@ -17,7 +17,7 @@ last_azimuth = 0
 current_playing = None
 slider_updating = False
 vbap_gain = np.array([1.0]*5)        
-force_stereo = False    
+force_stereo = False               # True for 2.0, false for 5.0
 control_buttons = {}   
 music_slider = None
 
@@ -488,5 +488,6 @@ volume_slider.pack()
 
 # Start slider update loop
 update_music_slider()
+print("Audio device configuration: ", 2.0 if force_stereo else 5.0)
 
 root.mainloop()
