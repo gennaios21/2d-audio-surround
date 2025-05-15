@@ -326,7 +326,7 @@ class CircularSlider(tk.Canvas):
 # ---------------------- Main window ------------------------
 
 root = tk.Tk()
-root.title("5.0 Surround Audio Player with UI Switcher")
+root.title("5.0 Surround Audio Player with VBAP")
 root.geometry("1200x750")
 
 # --- Radio button variable and switch function ---
