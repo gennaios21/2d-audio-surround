@@ -488,6 +488,18 @@ volume_slider.pack()
 
 # Start slider update loop
 update_music_slider()
+
+# Find the audio hardware configuration of the computer's sound card
+def callback(outdata, frames, time, status):
+    outdata.fill(0)
+
+with sd.OutputStream(callback=callback) as stream:
+    device_info = sd.query_devices(stream.device)
+    print(f"Using device: {device_info['name']} (Output Channels: {device_info['max_output_channels']})")
+    # print(device_info)
+    if device_info['max_output_channels'] == 2:
+        force_stereo = True
+
 print("Audio device configuration: ", 2.0 if force_stereo else 5.0)
 
 root.mainloop()
