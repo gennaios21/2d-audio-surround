@@ -43,7 +43,8 @@ def load_file():
         pointer = 0
         status_label.config(text=f"Loaded: {path.split('/')[-1]}", fg='red')
         music_slider.config(to=int(len(audio_data) / fs))
-        duration_label.config(text=format_time(len(audio_data) / fs))
+        duration_label_static.config(text=format_time(len(audio_data) / fs))
+        duration_label_dynamic.config(text=format_time(len(audio_data) / fs))
         if not stream:
             start_stream()
 
@@ -223,7 +224,8 @@ def update_music_slider():
         slider_updating = True
         seconds = pointer / fs
         music_slider.set(int(seconds))
-        current_time_label.config(text=format_time(seconds))
+        current_time_label_static.config(text=format_time(seconds))
+        current_time_label_dynamic.config(text=format_time(seconds))
         slider_updating = False
     root.after(200, update_music_slider)
 
@@ -394,8 +396,8 @@ listener_label.place(relx=0.5, rely=0.5, anchor="center")
 slider_frame_main = tk.Frame(static_frame)
 slider_frame_main.pack(pady=10)
 
-current_time_label = tk.Label(slider_frame_main, text="00:00", font=("Arial", 12))
-current_time_label.pack(side=tk.LEFT)
+current_time_label_static = tk.Label(slider_frame_main, text="00:00", font=("Arial", 12))
+current_time_label_static.pack(side=tk.LEFT)
 
 music_slider = tk.Scale(
     slider_frame_main,
@@ -409,8 +411,8 @@ music_slider = tk.Scale(
 )
 music_slider.pack(side=tk.LEFT, padx=10)
 
-duration_label = tk.Label(slider_frame_main, text="00:00", font=("Arial", 12))
-duration_label.pack(side=tk.LEFT)
+duration_label_static = tk.Label(slider_frame_main, text="00:00", font=("Arial", 12))
+duration_label_static.pack(side=tk.LEFT)
 
 slider_frame = tk.Frame(static_frame)
 slider_frame.pack(side=tk.RIGHT, padx=30, anchor="n")
@@ -450,8 +452,8 @@ play_stop_button.pack(pady=10)
 slider_frame_main = tk.Frame(dynamic_frame)
 slider_frame_main.pack(pady=10)
 
-current_time_label = tk.Label(slider_frame_main, text="00:00", font=("Arial", 12))
-current_time_label.pack(side=tk.LEFT)
+current_time_label_dynamic = tk.Label(slider_frame_main, text="00:00", font=("Arial", 12))
+current_time_label_dynamic.pack(side=tk.LEFT)
 
 music_slider = tk.Scale(
     slider_frame_main,
@@ -465,8 +467,8 @@ music_slider = tk.Scale(
 )
 music_slider.pack(side=tk.LEFT, padx=10)
 
-duration_label = tk.Label(slider_frame_main, text="00:00", font=("Arial", 12))
-duration_label.pack(side=tk.LEFT)
+duration_label_dynamic = tk.Label(slider_frame_main, text="00:00", font=("Arial", 12))
+duration_label_dynamic.pack(side=tk.LEFT)
 
 # Volume slider
 slider_frame = tk.Frame(dynamic_frame)
@@ -495,11 +497,11 @@ def callback(outdata, frames, time, status):
 
 with sd.OutputStream(callback=callback) as stream:
     device_info = sd.query_devices(stream.device)
-    print(f"Using device: {device_info['name']} (Output Channels: {device_info['max_output_channels']})")
+    print(f"Using device: {device_info['name']} (Max Output Channels: {device_info['max_output_channels']})")
     # print(device_info)
     if device_info['max_output_channels'] == 2:
         force_stereo = True
 
-print("Audio device configuration: ", 2.0 if force_stereo else 5.0)
+print("Number of selected channels: ", 2.0 if force_stereo else 5.0)
 
 root.mainloop()
